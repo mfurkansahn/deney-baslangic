@@ -1,0 +1,6 @@
+This codebase was copied from GitHub repository:
+https://github.com/mfurkansahn/ffp-anomaly-baseline
+
+Branch: bezier_motion_regularization
+Commit: 8724423
+Date: 2025-12-24

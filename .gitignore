@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+data/
+results/
+weights/
+flownet/pretrained/*.pth
+
