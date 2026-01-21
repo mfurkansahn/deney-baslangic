@@ -214,13 +214,25 @@ def forward(input, target, input_last, input_prev, models, losses, epoch):
 
 
     if lambda_bezier > 0:
-        bezier_l = losses['bezier_loss'](
-            input_prev,   # frame_{t-1}
-            input_last,   # frame_t
-            pred_frame    # predicted frame_{t+1}
-        )
-        loss_gen += lambda_bezier * bezier_l
+        # ===== Bezier Trajectory in MOTION SPACE =====
+        # flow_{t-1 -> t}
+        with torch.no_grad():
+            flow_tm1_t = (flownet(
+                torch.cat([input_prev.unsqueeze(2), input_last.unsqueeze(2)], 2) * 255.
+            ) / 255.).detach()
 
+        # flow_{t -> t+1_pred}
+        flow_t_tp1 = (flownet(
+            torch.cat([input_last.unsqueeze(2), pred_frame.unsqueeze(2)], 2) * 255.
+        ) / 255.)
+
+        if lambda_bezier > 0:
+            bezier_l = losses['bezier_loss'](
+                flow_tm1_t,     # motion at t-1 -> t
+                torch.zeros_like(flow_tm1_t),  # control anchor (see note below)
+                flow_t_tp1      # predicted motion
+            )
+            loss_gen += lambda_bezier * bezier_l
 
     # =========================================
 
