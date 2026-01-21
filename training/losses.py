@@ -65,6 +65,7 @@ class Discriminate_Loss(nn.Module):
         return torch.mean((real_outputs - 1) ** 2 / 2) + torch.mean(fake_outputs ** 2 / 2)
 
 class Temporal_Consistency_Loss(nn.Module):
+    #L1 yerine Charbonnier 1.Adımda ekledim.
     def __init__(self, eps=1e-3):
         super().__init__()
         self.eps = eps

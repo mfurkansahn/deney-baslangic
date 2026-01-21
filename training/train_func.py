@@ -186,9 +186,17 @@ def forward(input, target, input_last, input_prev, models, losses, epoch):
     loss_gen = loss_gen + lambda_motion * motion_l
 
     # ===== Temporal Consistency Loss =====
-    lambda_temp = 0.05
+    # ===== Temporal Consistency Curriculum =====
+    if epoch < 10:
+        lambda_temp = 0.0
+    elif epoch < 30:
+        lambda_temp = 0.01
+    else:
+        lambda_temp = 0.02   # eski 0.05 yerine DAHA YUMUŞAK
+
     temp_l = losses['temporal_loss'](pred_frame, input_last, input_prev)
     loss_gen = loss_gen + lambda_temp * temp_l
+
 
     # =========================================
     
@@ -202,7 +210,8 @@ def forward(input, target, input_last, input_prev, models, losses, epoch):
     elif epoch < 40:
         lambda_bezier = 1e-6
     else:
-        lambda_bezier = min(1e-5, 1e-6 * (epoch - 40))
+        lambda_bezier = min(1e-5, 1e-6 * (epoch - 39)) #40 adımda 0 gözüküyor ondan 39 dan sonra 1e-5 e kadar çıkıyor
+
 
     if lambda_bezier > 0:
         bezier_l = losses['bezier_loss'](
