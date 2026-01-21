@@ -47,7 +47,7 @@ def training(cfg, dataset, dataloader, models, losses, opts, scores):
             target = clips[:, 12:15, :, :].cuda()  # (n, 3, 256, 256) 
 
             # forward
-            G_l, D_l, F_frame, bezier_l = forward(
+            G_l, D_l, F_frame, bezier_l, lambda_bezier, lambda_temp = forward(
                 input=input.cuda(),
                 target=target,
                 input_last=frame_4,
@@ -99,6 +99,7 @@ def training(cfg, dataset, dataloader, models, losses, opts, scores):
                         f"G_l: {G_l:.3f} | "
                         f"D_l: {D_l:.3f} | "
                         f"Bezier_l: {bezier_l.item():.6f} | "
+                        f"lam_b: {lambda_bezier:.2e} | lam_t: {lambda_temp:.3f} |" #lambda değeri de gözüksün
                         f"psnr: {psnr:.3f} | "
                         f"best_auc: {scores['best_auc']:.3f} | "
                         f"iter_t: {iter_t:.3f}s | "
@@ -241,4 +242,4 @@ def forward(input, target, input_last, input_prev, models, losses, epoch):
     loss_dis = discriminate_loss(discriminator(target),
                                  discriminator(pred_frame.detach()))
 
-    return loss_gen, loss_dis, pred_frame, bezier_l
+    return loss_gen, loss_dis, pred_frame, bezier_l, lambda_bezier, lambda_temp
