@@ -106,6 +106,7 @@ def load_scores(cfg):
         auc_list = torch.load(cfg.resume)['auc_list']
         g_loss_list = torch.load(cfg.resume)['g_loss_list']
         d_loss_list = torch.load(cfg.resume)['d_loss_list']
+        bezier_loss_list = torch.load(cfg.resume)['bezier_loss_list']
     else:
         step = 0
         iter_list = []
@@ -113,6 +114,7 @@ def load_scores(cfg):
         auc_list= []
         g_loss_list = []
         d_loss_list = []
+        bezier_loss_list = []
 
     scores = dict()
     scores['step'] = step
@@ -121,6 +123,7 @@ def load_scores(cfg):
     scores['auc_list'] = auc_list
     scores['g_loss_list'] = g_loss_list
     scores['d_loss_list'] = d_loss_list
+    scores['bezier_loss_list'] = bezier_loss_list
 
     return scores
 

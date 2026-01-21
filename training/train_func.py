@@ -47,13 +47,14 @@ def training(cfg, dataset, dataloader, models, losses, opts, scores):
             target = clips[:, 12:15, :, :].cuda()  # (n, 3, 256, 256) 
 
             # forward
-            G_l, D_l, F_frame = forward(
+            G_l, D_l, F_frame, bezier_l = forward(
                 input=input.cuda(),
                 target=target,
                 input_last=frame_4,
                 input_prev=frame_3,
                 models=models,
-                losses=losses
+                losses=losses,
+                epoch=epoch
             )
 
             scores['g_loss_list'].append(G_l.item())
@@ -92,9 +93,18 @@ def training(cfg, dataset, dataloader, models, losses, opts, scores):
                     # calculate psnr
                     psnr = psnr_error(F_frame, target)
 
-                    # print loss, psnr, auc
-                    print(f"[{scores['step']}] G_l: {G_l:.3f} | D_l: {D_l:.3f} | psnr: {psnr:.3f} | "\
-                    f"best_auc: {scores['best_auc']:.3f} | iter_t: {iter_t:.3f}s | remain_t: {eta}")
+                    # print loss, psnr, auc, bezier loss
+                    print(
+                        f"[{scores['step']}] "
+                        f"G_l: {G_l:.3f} | "
+                        f"D_l: {D_l:.3f} | "
+                        f"Bezier_l: {bezier_l.item():.6f} | "
+                        f"psnr: {psnr:.3f} | "
+                        f"best_auc: {scores['best_auc']:.3f} | "
+                        f"iter_t: {iter_t:.3f}s | "
+                        f"remain_t: {eta}"
+                    )
+
 
                     # view loss by graph
                     view_loss(cfg, scores)
@@ -129,7 +139,7 @@ def training(cfg, dataset, dataloader, models, losses, opts, scores):
         epoch += 1
         
 
-def forward(input, target, input_last, input_prev, models, losses):
+def forward(input, target, input_last, input_prev, models, losses, epoch):
     '''
     Return generator_loss, discriminator_loss, generated_frame
     '''
@@ -142,6 +152,8 @@ def forward(input, target, input_last, input_prev, models, losses):
     gradient_loss = losses['gradient_loss']
     adversarial_loss = losses['adversarial_loss']
     flow_loss = losses['flow_loss']
+
+    bezier_l = torch.tensor(0.0).cuda()
 
     coefs = [1, 1, 0.05, 2] # inte_l, grad_l, adv_l, flow_l
 
@@ -184,15 +196,22 @@ def forward(input, target, input_last, input_prev, models, losses):
     # ===== Bezier Trajectory Loss =====
 
     # ===== Bezier Trajectory Regularization =====
-    lambda_bezier = 0.005   # IMPORTANT: small regularizer
+    # ===== Bezier Trajectory Curriculum =====
+    if epoch < 20:
+        lambda_bezier = 0.0
+    elif epoch < 40:
+        lambda_bezier = 1e-6
+    else:
+        lambda_bezier = min(1e-5, 1e-6 * (epoch - 40))
 
-    bezier_l = losses['bezier_loss'](
-        input_prev,   # frame_{t-1}
-        input_last,   # frame_t
-        pred_frame    # predicted frame_{t+1}
-    )
+    if lambda_bezier > 0:
+        bezier_l = losses['bezier_loss'](
+            input_prev,   # frame_{t-1}
+            input_last,   # frame_t
+            pred_frame    # predicted frame_{t+1}
+        )
+        loss_gen += lambda_bezier * bezier_l
 
-    loss_gen += lambda_bezier * bezier_l
 
     # =========================================
 
@@ -201,4 +220,4 @@ def forward(input, target, input_last, input_prev, models, losses):
     loss_dis = discriminate_loss(discriminator(target),
                                  discriminator(pred_frame.detach()))
 
-    return loss_gen, loss_dis, pred_frame
+    return loss_gen, loss_dis, pred_frame, bezier_l

@@ -65,17 +65,16 @@ class Discriminate_Loss(nn.Module):
         return torch.mean((real_outputs - 1) ** 2 / 2) + torch.mean(fake_outputs ** 2 / 2)
 
 class Temporal_Consistency_Loss(nn.Module):
-    def __init__(self):
+    def __init__(self, eps=1e-3):
         super().__init__()
+        self.eps = eps
 
     def forward(self, pred, frame_4, frame_3):
-        """
-        Enforces temporal smoothness:
-        (F_{t+1} - F_t) ≈ (F_t - F_{t-1})
-        """
         diff_future = pred - frame_4
-        diff_past = frame_4 - frame_3
-        return torch.mean(torch.abs(diff_future - diff_past))
+        diff_past   = frame_4 - frame_3
+        x = diff_future - diff_past
+        # Charbonnier penalty (smooth L1-like)
+        return torch.mean(torch.sqrt(x * x + self.eps))
 
 class Motion_Loss(nn.Module):
     def __init__(self):
